@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Математически Тренажор</title>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cell: 40px;
+            --grid-color: #93c5fd;
+            --red-line: #ef4444;
+            --pen-blue: #0ea5e9;
+            --bg-dark: #1e293b;
+        }
+
+        /* 1. Пълен Reset, за да спрем своеволията на мобилните браузъри */
+        * { 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent; 
+            margin: 0; 
+            padding: 0; 
+        }
+        
+        body, html { 
+            min-height: 100vh; 
+            font-family: 'Comfortaa', sans-serif; 
+            background: var(--bg-dark); 
+            color: white; 
+        }
+
+        /* НАЧАЛЕН ЕКРАН */
+        #start-screen {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 20px; text-align: center; min-height: 100vh;
+        }
+        .card { background: #334155; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 100%; max-width: 500px; }
+        input.name-field { width: 100%; padding: 12px; border-radius: 10px; border: none; font-size: 18px; margin-bottom: 20px; font-family: inherit; text-align: center; }
+        .setup-group { margin-bottom: 20px; }
+        .setup-label { display: block; margin-bottom: 10px; font-weight: 800; color: #facc15; }
+        .btn-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .opt-btn { background: #475569; color: white; border: 2px solid transparent; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-family: inherit; font-weight: 700; }
+        .opt-btn.active { border-color: #facc15; background: #facc15; color: #000; }
+        .main-start-btn { background: #22c55e; color: white; border: none; padding: 15px 40px; border-radius: 30px; font-size: 22px; font-weight: 800; cursor: pointer; margin-top: 10px; width: 100%; }
+
+        /* ТЕТРАДКА */
+        #app-container { display: none; flex-direction: column; align-items: center; padding: 15px; }
+        .notebook {
+            background: white; position: relative; width: 100%; max-width: 880px;
+            background-image: linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+                              linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+            background-size: var(--cell) var(--cell); padding: var(--cell) 0; border-radius: 4px;
+        }
+        .notebook::before { content: ''; position: absolute; left: calc(var(--cell) * 3); top: 0; bottom: 0; width: 2px; background: var(--red-line); }
+        .stats-bar { width: 100%; max-width: 880px; display: flex; justify-content: space-between; padding: 10px; background: #334155; border-radius: 10px; margin-bottom: 15px; font-size: 14px; }
+
+        /* 2. РАЗПРЕДЕЛЕНИЕ В КОЛОНИ */
+        .tasks-layout { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            column-gap: var(--cell); /* Разстояние между двете колони на компютър */
+            margin-left: calc(var(--cell) * 4); 
+        }
+
+        /* 3. РЕД НА ЗАДАЧА - ФИКСИРАН С GRID */
+        .task-row { 
+            display: grid; 
+            grid-auto-columns: var(--cell); /* Всяка част от задачата е точно 1 квадратче */
+            grid-auto-flow: column; /* Подрежда ги в колони една до друга */
+            height: var(--cell); 
+            margin-bottom: var(--cell); 
+            align-items: center;
+            justify-items: center;
+        }
+
+        /* 4. ЦИФРИ И КВАДРАТЧЕТА - ФИКСИРАНИ И ЦЕНТРИРАНИ */
+        .digit, .ans-input { 
+            width: var(--cell) !important; 
+            height: var(--cell) !important; 
+            margin: 0 !important; 
+            padding: 0 !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 26px; 
+            color: var(--pen-blue); 
+            font-weight: 800; 
+            font-family: 'Comfortaa', sans-serif;
+            border: none;
+        }
+        
+        .ans-input { 
+            border: 2px solid #93c5fd !important; 
+            outline: none; 
+            border-radius: 0; 
+            background: rgba(255,255,255,0.9);
+        }
+        .ans-input.correct { border-color: #22c55e !important; color: #16a34a !important; background: #f0fdf4; }
+        .ans-input.wrong { border-color: #ef4444 !important; color: #ef4444 !important; background: #fef2f2; }
+
+        .bottom-btns { margin-top: 20px; display: flex; gap: 10px; width: 100%; max-width: 880px; }
+        .action-btn { flex: 1; padding: 15px; border-radius: 12px; border: none; font-weight: 800; font-size: 18px; cursor: pointer; font-family: 'Comfortaa'; }
+
+        /* 5. МОБИЛНА ВЕРСИЯ */
+        @media (max-width: 800px) { 
+            .tasks-layout { 
+                grid-template-columns: 1fr; /* Минава в една колона */
+                margin-left: calc(var(--cell) * 3.5); 
+            }
+            :root { --cell: 38px; } /* Леко намаляване на размера, за да пасне на малки екрани */
+        }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen">
+        <div class="card">
+            <h1 style="color:#facc15; margin-top:0;">Математико</h1>
+            <input type="text" id="studentName" class="name-field" placeholder="Твоето име...">
+            
+            <div class="setup-group">
+                <span class="setup-label">ИЗБЕРИ ДЕЙСТВИЕ</span>
+                <div class="btn-group">
+                    <button class="opt-btn active" onclick="setOp('add', this)">➕ Събиране</button>
+                    <button class="opt-btn" onclick="setOp('sub', this)">➖ Изваждане</button>
+                </div>
+            </div>
+
+            <div class="setup-group">
+                <span class="setup-label">НИВО НА ТРУДНОСТ</span>
+                <div class="btn-group">
+                    <button class="opt-btn active" onclick="setLv(10, this)">До 10</button>
+                    <button class="opt-btn" onclick="setLv(20, this)">До 20</button>
+                    <button class="opt-btn" onclick="setLv(100, this)">До 100</button>
+                </div>
+            </div>
+
+            <button class="main-start-btn" onclick="initApp()">ЗАПОЧНИ</button>
+            <p id="total-stats" style="font-size: 12px; color: #94a3b8; margin-top: 20px;"></p>
+        </div>
+    </div>
+
+    <div id="app-container">
+        <div class="stats-bar">
+            <span id="ui-name">Ученик: </span>
+            <span id="ui-solved">Листи: 0</span>
+        </div>
+
+        <div class="notebook">
+            <div class="tasks-layout" id="task-grid"></div>
+        </div>
+
+        <div class="bottom-btns">
+            <button class="action-btn" style="background:#22c55e; color:white;" onclick="check()">ПРОВЕРИ</button>
+            <button id="next-btn" class="action-btn" style="background:#3b82f6; color:white; display:none;" onclick="location.reload()">НОВ ЛИСТ</button>
+        </div>
+    </div>
+
+<script>
+    let op = 'add', lv = 10;
+    let student = "";
+
+    window.onload = () => {
+        let savedName = localStorage.getItem('math_name');
+        if(savedName) document.getElementById('studentName').value = savedName;
+        updateGlobalStatsUI();
+    };
+
+    function setOp(val, b) { op = val; selectBtn(b, '.setup-group:nth-child(2)'); }
+    function setLv(val, b) { lv = val; selectBtn(b, '.setup-group:nth-child(3)'); }
+    function selectBtn(b, parent) { 
+        document.querySelectorAll(`${parent} .opt-btn`).forEach(x => x.classList.remove('active')); 
+        b.classList.add('active'); 
+    }
+
+    function updateGlobalStatsUI() {
+        let solved = localStorage.getItem('math_total_solved') || 0;
+        document.getElementById('total-stats').innerText = `Общо решени листи досега: ${solved}`;
+    }
+
+    function initApp() {
+        student = document.getElementById('studentName').value || "Ученик";
+        localStorage.setItem('math_name', student);
+        
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('app-container').style.display = 'flex';
+        document.getElementById('ui-name').innerText = `Ученик: ${student}`;
+        document.getElementById('ui-solved').innerText = `Листи: ${localStorage.getItem('math_total_solved') || 0}`;
+        
+        generateTasks();
+    }
+
+    function generateTasks() {
+        const grid = document.getElementById('task-grid');
+        grid.innerHTML = '';
+        for(let i=0; i<16; i++) {
+            let a, b, ans;
+            if(lv <= 20) {
+                if(op === 'add') { a = Math.floor(Math.random()*lv); b = Math.floor(Math.random()*(lv-a)); ans = a+b; }
+                else { a = Math.floor(Math.random()*lv)+1; b = Math.floor(Math.random()*a); ans = a-b; }
+            } else {
+                a = Math.floor(Math.random()*90)+10; b = Math.floor(Math.random()*9);
+                if(op === 'sub') { b = Math.min(b, a%10); ans = a-b; } else { ans = a+b; }
+            }
+
+            // Генерираме задачата без никакви празни места в HTML стринга, за да не се получават невидими дупки
+            let inputs = String(ans).split('').map(c => `<input type="number" inputmode="numeric" class="ans-input g-${i}" data-c="${c}">`).join('');
+            grid.innerHTML += `<div class="task-row"><div class="digit">${a}</div><div class="digit">${op==='add'?'+':'-'}</div><div class="digit">${b}</div><div class="digit">=</div>${inputs}</div>`;
+        }
+    }
+
+    function check() {
+        let allCorrect = true;
+        for(let i=0; i<16; i++) {
+            let fields = document.querySelectorAll(`.g-${i}`);
+            let isRowOk = Array.from(fields).every(f => f.value === f.getAttribute('data-c'));
+            fields.forEach(f => f.className = isRowOk ? `ans-input g-${i} correct` : `ans-input g-${i} wrong`);
+            if(!isRowOk) allCorrect = false;
+        }
+
+        if(allCorrect) {
+            let total = parseInt(localStorage.getItem('math_total_solved') || 0) + 1;
+            localStorage.setItem('math_total_solved', total);
+            document.getElementById('ui-solved').innerText = `Листи: ${total}`;
+            document.getElementById('next-btn').style.display = 'block';
+            alert("Браво! Всичко е вярно! ⭐");
+        } else {
+            alert("Имаш грешки. Провери пак червените квадратчета!");
+        }
+    }
+</script>
+</body>
+</html>
